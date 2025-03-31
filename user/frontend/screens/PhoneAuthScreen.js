@@ -10,8 +10,6 @@ import {
   Platform,
   Image,
 } from "react-native";
-import { auth } from "../config/firebase";
-import { PhoneAuthProvider, signInWithCredential } from "firebase/auth";
 import { styled } from "nativewind";
 
 const StyledView = styled(View);
@@ -29,7 +27,6 @@ const placeholderImage = {
 
 const PhoneAuthScreen = ({ navigation }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [verificationId, setVerificationId] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isCodeSent, setIsCodeSent] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -70,15 +67,7 @@ const PhoneAuthScreen = ({ navigation }) => {
     try {
       const formattedNumber = formatPhoneNumber(phoneNumber);
 
-      // In a real implementation, use Firebase recaptcha verifier
-      // const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container');
-
-      // For demo purposes (in real app, use Firebase's signInWithPhoneNumber)
-      // const confirmationResult = await signInWithPhoneNumber(auth, formattedNumber, recaptchaVerifier);
-      // setVerificationId(confirmationResult.verificationId);
-
-      // Since we can't actually test this in the demo, we'll just simulate it
-      setVerificationId("dummy-verification-id");
+      // Simulate sending a verification code
       setIsCodeSent(true);
       startCountdown();
 
@@ -88,75 +77,78 @@ const PhoneAuthScreen = ({ navigation }) => {
     }
   };
 
+  const resendVerificationCode = () => {
+    if (isResendDisabled) return;
+
+    sendVerificationCode();
+  };
+
   const verifyCode = async () => {
-    if (verificationCode.length !== 6) {
-      Alert.alert("Error", "Please enter a valid 6-digit code");
-      return;
-    }
-
     try {
-      // In a real implementation:
-      // const credential = PhoneAuthProvider.credential(verificationId, verificationCode);
-      // await signInWithCredential(auth, credential);
+      // For demo: Simple validation of format
+      if (verificationCode.length !== 6) {
+        Alert.alert("Error", "Please enter all 6 digits of the OTP");
+        return;
+      }
 
-      // For demo purposes, we'll just simulate successful verification
-      navigation.replace("Home");
+      // Hardcoded verification for testing - would be replaced with actual verification
+      if (verificationCode === "123456") {
+        // Navigate to main app
+        navigation.replace("Home");
+      } else {
+        Alert.alert(
+          "Error",
+          "Invalid verification code. Try 123456 for testing."
+        );
+      }
     } catch (error) {
       Alert.alert("Error", error.message);
     }
   };
 
-  const resendCode = () => {
-    if (!isResendDisabled) {
-      sendVerificationCode();
+  const handleOtpChange = (text, index) => {
+    if (text.length > 1) {
+      text = text[0]; // Only take the first character if multiple are pasted
+    }
+
+    // Update the verification code
+    const newCode = verificationCode.split("");
+    newCode[index] = text;
+    setVerificationCode(newCode.join(""));
+
+    // Auto-focus next input if text was entered
+    if (text && index < 5) {
+      const nextInput = document.querySelector(`input[name=otp-${index + 1}]`);
+      if (nextInput) nextInput.focus();
     }
   };
 
-  // Simple custom OTP input
-  const OtpInput = () => {
-    const inputRefs = Array(6)
-      .fill(0)
-      .map(() => React.createRef());
+  const handleKeyPress = (e, index) => {
+    if (
+      e.nativeEvent.key === "Backspace" &&
+      index > 0 &&
+      !verificationCode[index]
+    ) {
+      // Focus previous input on backspace
+      const prevInput = document.querySelector(`input[name=otp-${index - 1}]`);
+      if (prevInput) prevInput.focus();
+    }
+  };
 
-    const handleOtpChange = (text, index) => {
-      // Update the verification code
-      const newCode = verificationCode.split("");
-      newCode[index] = text;
-      setVerificationCode(newCode.join(""));
-
-      // Move to next input if text was entered
-      if (text.length === 1 && index < 5) {
-        inputRefs[index + 1].current.focus();
-      }
-    };
-
-    const handleKeyPress = (e, index) => {
-      // Move to previous input on backspace
-      if (
-        e.nativeEvent.key === "Backspace" &&
-        index > 0 &&
-        !verificationCode[index]
-      ) {
-        inputRefs[index - 1].current.focus();
-      }
-    };
-
+  const renderOtpInputs = () => {
     return (
-      <StyledView className="flex-row justify-between mb-6">
-        {Array(6)
-          .fill(0)
-          .map((_, index) => (
-            <StyledTextInput
-              key={index}
-              ref={inputRefs[index]}
-              className="w-[45px] h-[50px] border border-gray-300 rounded-lg text-center text-lg bg-gray-100"
-              keyboardType="number-pad"
-              maxLength={1}
-              value={verificationCode[index] || ""}
-              onChangeText={(text) => handleOtpChange(text, index)}
-              onKeyPress={(e) => handleKeyPress(e, index)}
-            />
-          ))}
+      <StyledView className="flex-row justify-between mt-8">
+        {[0, 1, 2, 3, 4, 5].map((index) => (
+          <StyledTextInput
+            key={index}
+            className="w-12 h-12 border border-gray-300 rounded-lg text-center text-xl"
+            maxLength={1}
+            keyboardType="number-pad"
+            value={verificationCode[index] || ""}
+            onChangeText={(text) => handleOtpChange(text, index)}
+            onKeyPress={(e) => handleKeyPress(e, index)}
+          />
+        ))}
       </StyledView>
     );
   };
@@ -208,45 +200,43 @@ const PhoneAuthScreen = ({ navigation }) => {
                 className="h-14 bg-primary rounded-full items-center justify-center mt-10"
                 onPress={sendVerificationCode}
               >
-                <StyledText className="text-white text-lg font-bold">
-                  Get OTP
+                <StyledText className="text-lg font-medium text-white">
+                  Send Verification Code
                 </StyledText>
               </StyledTouchableOpacity>
             </StyledView>
           ) : (
             <StyledView className="mt-10">
-              <StyledText className="text-base font-medium mb-4">
-                Enter 6-digit OTP
-              </StyledText>
+              {renderOtpInputs()}
 
-              <OtpInput />
+              <StyledView className="flex-row justify-center mt-6">
+                <StyledText className="text-gray-500">
+                  Didn't receive code?{" "}
+                </StyledText>
+                <StyledTouchableOpacity
+                  onPress={resendVerificationCode}
+                  disabled={isResendDisabled}
+                >
+                  <StyledText
+                    className={`font-medium ${
+                      isResendDisabled ? "text-gray-400" : "text-primary"
+                    }`}
+                  >
+                    {isResendDisabled
+                      ? `Resend in ${countdown}s`
+                      : "Resend Code"}
+                  </StyledText>
+                </StyledTouchableOpacity>
+              </StyledView>
 
               <StyledTouchableOpacity
                 className="h-14 bg-primary rounded-full items-center justify-center mt-10"
                 onPress={verifyCode}
               >
-                <StyledText className="text-white text-lg font-bold">
+                <StyledText className="text-lg font-medium text-white">
                   Verify
                 </StyledText>
               </StyledTouchableOpacity>
-
-              <StyledView className="flex-row justify-center mt-5">
-                <StyledText className="text-gray-500">
-                  Didn't receive the OTP?{" "}
-                </StyledText>
-                <StyledTouchableOpacity
-                  onPress={resendCode}
-                  disabled={isResendDisabled}
-                >
-                  <StyledText
-                    className={`font-bold ${
-                      isResendDisabled ? "text-gray-400" : "text-primary"
-                    }`}
-                  >
-                    {isResendDisabled ? `Resend in ${countdown}s` : "Resend"}
-                  </StyledText>
-                </StyledTouchableOpacity>
-              </StyledView>
             </StyledView>
           )}
         </StyledView>

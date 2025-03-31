@@ -3,8 +3,6 @@ import { StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { auth } from "./config/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 
 // Import screens
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -58,27 +56,27 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState(null);
 
-  // Handle user state changes
-  function onAuthStateChange(user) {
-    setUser(user);
-    if (initializing) setInitializing(false);
-  }
-
   useEffect(() => {
-    // Uncomment once Firebase is fully set up
-    // const subscriber = onAuthStateChanged(auth, onAuthStateChange);
-    // return subscriber; // unsubscribe on unmount
+    // Set initializing to false after a short delay to simulate auth check
+    const timer = setTimeout(() => {
+      setInitializing(false);
+    }, 1000);
 
-    // For now, just set initializing to false
-    setInitializing(false);
+    return () => clearTimeout(timer);
   }, []);
 
-  if (initializing) return null;
+  if (initializing) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
       {user ? <MainStack /> : <AuthStack />}
+      <StatusBar style="auto" />
     </NavigationContainer>
   );
 }

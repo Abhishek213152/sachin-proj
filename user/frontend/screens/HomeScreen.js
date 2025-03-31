@@ -7,7 +7,6 @@ import {
   Image,
   SafeAreaView,
 } from "react-native";
-import { auth } from "../config/firebase";
 import { styled } from "nativewind";
 
 const StyledView = styled(View);
@@ -18,13 +17,9 @@ const StyledScrollView = styled(ScrollView);
 const StyledImage = styled(Image);
 
 const HomeScreen = ({ navigation }) => {
-  const signOut = async () => {
-    try {
-      await auth.signOut();
-      navigation.replace("Onboarding");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
+  const signOut = () => {
+    // Simple sign out without Firebase
+    navigation.replace("Onboarding");
   };
 
   const navigateToSection = (sectionName) => {
